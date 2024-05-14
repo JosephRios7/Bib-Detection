@@ -50,6 +50,10 @@ def detect_dorsal():
             start = time.time()
             output = get_rbns(img, bd_configPath, bd_weightsPath,
                             bd_classes, nr_configPath, nr_weightsPath, nr_classes)
+            end = time.time()
+
+            st.write(f'Pred time: {round(end - start, 2)} seconds')
+            
             if output:
                 dorsal_number = output[0][0]  # Extraer el número del dorsal
                 st.success(f'Número de dorsal: {dorsal_number}')
@@ -154,3 +158,59 @@ def create_navbar():
 
 # Mostrar la barra de navegación y el contenido de la página
 create_navbar()
+
+
+# FUNCION DE DETECCION POR CAMARA WEB
+#----------------------------------------------------------------
+# Selección de la cámara
+camera_option = st.radio("Selecciona la cámara:", ('Cámara web integrada', 'Cámara externa'))
+
+if camera_option == 'Cámara web integrada':
+    cam_id = 0
+else:
+    cam_id = 1
+
+# Función para capturar video de la cámara web
+def capture_camera():
+    cap = cv.VideoCapture(cam_id)
+    frame_st = st.empty()
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+
+        if not ret:
+            break
+
+        # Realizar predicciones
+        frame_with_predictions = predict(frame)
+
+        # Mostrar el frame con predicciones
+        frame_st.image(frame_with_predictions, caption='Detección en tiempo real',
+                       use_column_width=True, channels="BGR")
+
+        #time.sleep(0.1)  # Añadir un pequeño retraso para mejorar la visualización
+
+        if cv.waitKey(10) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+
+# Función para realizar predicciones en los frames de video
+def predict(frame):
+    # Obtener las predicciones de los bibs y números en el frame actual
+    output = get_rbns(frame, bd_configPath, bd_weightsPath, bd_classes, nr_configPath, nr_weightsPath, nr_classes)
+
+    # Anotar el frame con las predicciones si las hay
+    if output is not None:
+        for detection in output:
+            (x, y, w, h) = detection[1]
+            cv.rectangle(frame, (x, y), (x + w, y + h), pred_color, 2)
+            cv.putText(frame, str(detection[0]), (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 2, text_color, 2)
+
+    return frame
+
+
+if __name__ == "__main__":
+    capture_camera()
+
