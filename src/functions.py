@@ -1,3 +1,5 @@
+from datetime import datetime
+import numpy as np
 import os
 import cv2 as cv
 import pandas as pd
@@ -78,5 +80,50 @@ def validate_accuracy():
 
     return true_positives / total
 
+def get_rbns(img, bd_configPath, bd_weightsPath, bd_classes, nr_configPath, nr_weightsPath, nr_classes, single=False):
+    """
+    Given an image return bib numbers and bib bounding boxes for detected bibs
+    
+    Args:
+        img (numpy array): image array given by openCV .imread
+        bd_configPath (str): path to bib detector config file
+        bd_weightsPath (str): path to bib detector weights file
+        bd_classes (list): list of bib detector class names
+        nr_configPath (str): path to number recognizer config file
+        nr_weightsPath (str): path to number recognizer weights file
+        nr_classes (list): list of number recognizer class names
+        single (bool): whether one or many bib detections will be returned. If true, return detection with largest bounding box area.
+            
+    Returns:
+        List of detected bib numbers and corresponding bounding boxes in the format [<bib number>, [x, y, width, height]]
+    """
+    
+    # Instantiate detectors
+    bd = Detector(bd_configPath, bd_weightsPath, bd_classes)
+    nr = Detector(nr_configPath, nr_weightsPath, nr_classes)
 
+    # Make bib location predictions
+    bib_detections = bd.detect(img, conf=0.5)
 
+    rbns = []
+    
+    # If no detections, return empty list
+    if not bib_detections:
+        return rbns
+    
+    # If only one detection required, get detection with largest area
+    if single:
+        bib_detections = [max(bib_detections, key=lambda x: x[1][2] * x[1][3])]
+    
+    for bib in bib_detections:
+        (bib_cls, (x, y, w, h)) = bib
+        bib_img = img[y:y+h, x:x+w]
+
+        # Get bib number predictions
+        num_detections = nr.detect(bib_img, conf=0.5)
+        num_detections.sort(key=lambda x: x[1][0])  # Sort by x coordinate
+
+        rbn = ''.join([str(cls) for cls, box in num_detections])
+        rbns.append([rbn, [x, y, w, h]])
+    
+    return rbns
