@@ -27,6 +27,8 @@ nr_classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 true_color = [66, 245, 108]
 color = [66, 245, 108]
+pred_color = [255, 0, 255]
+text_color = (66, 245, 108) 
 dorsal_number = 0
 st.title('Detección de dorsales de corredores')
 def detect_dorsal():
@@ -111,8 +113,9 @@ def model_update():
             # annotated_image = cv.imread('/usr/validation/Full/imagen_annot.JPG')
             # st.image(annotated_image, caption='Imagen anotada',
             #          use_column_width=True)
-
+    
 # Sección para ver las imágenes guardadas
+
 
 
 def view_saved_images():
@@ -146,7 +149,7 @@ def view_saved_images():
 # Crear una barra de navegación en el sidebar
 def create_navbar():
     st.sidebar.title("Menú")
-    page = st.sidebar.radio("Ir a", ("Inicio", "Galería de Imágenes", "Actualizar Modelo"))
+    page = st.sidebar.radio("Ir a", ("Inicio", "Galería de Imágenes", "Actualizar Modelo", "Cámara Web"))
 
     if page == "Inicio":
         detect_dorsal()
@@ -154,6 +157,9 @@ def create_navbar():
         view_saved_images()
     elif page == "Actualizar Modelo":
         model_update()
+    elif page == "Cámara Web":
+        capture_camera()
+
 
 
 # Mostrar la barra de navegación y el contenido de la página
@@ -162,6 +168,7 @@ create_navbar()
 
 # FUNCION DE DETECCION POR CAMARA WEB
 #----------------------------------------------------------------
+# Selección de la cámara
 # Selección de la cámara
 camera_option = st.radio("Selecciona la cámara:", ('Cámara web integrada', 'Cámara externa'))
 
@@ -172,29 +179,30 @@ else:
 
 # Función para capturar video de la cámara web
 def capture_camera():
-    cap = cv.VideoCapture(cam_id)
-    frame_st = st.empty()
+    if st.button('Iniciar Camara'):
+        cap = cv.VideoCapture(cam_id)
+        frame_st = st.empty()
 
-    while cap.isOpened():
-        ret, frame = cap.read()
+        while cap.isOpened():
+            ret, frame = cap.read()
 
-        if not ret:
-            break
+            if not ret:
+                break
 
-        # Realizar predicciones
-        frame_with_predictions = predict(frame)
+            # Realizar predicciones
+            frame_with_predictions = predict(frame)
 
-        # Mostrar el frame con predicciones
-        frame_st.image(frame_with_predictions, caption='Detección en tiempo real',
-                       use_column_width=True, channels="BGR")
+            # Mostrar el frame con predicciones
+            frame_st.image(frame_with_predictions, caption='Detección en tiempo real',
+                        use_column_width=True, channels="BGR")
 
-        #time.sleep(0.1)  # Añadir un pequeño retraso para mejorar la visualización
+            time.sleep(0.1)  # Añadir un pequeño retraso para mejorar la visualización
 
-        if cv.waitKey(10) & 0xFF == ord('q'):
-            break
+            if cv.waitKey(10) & 0xFF == ord('q'):
+                break
 
-    cap.release()
-    cv.destroyAllWindows()
+        cap.release()
+        cv.destroyAllWindows()
 
 # Función para realizar predicciones en los frames de video
 def predict(frame):
@@ -205,12 +213,10 @@ def predict(frame):
     if output is not None:
         for detection in output:
             (x, y, w, h) = detection[1]
-            cv.rectangle(frame, (x, y), (x + w, y + h), pred_color, 2)
-            cv.putText(frame, str(detection[0]), (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 2, text_color, 2)
+            cv.rectangle(frame, (x, y), (x + w, y + h), pred_color, 4)
+            cv.putText(frame, str(detection[0]), (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 6, text_color, 6)
 
     return frame
 
-
 if __name__ == "__main__":
     capture_camera()
-
